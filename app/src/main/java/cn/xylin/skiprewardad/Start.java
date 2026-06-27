@@ -9,6 +9,7 @@ import cn.xylin.skiprewardad.hook.FusionAdHook;
 import cn.xylin.skiprewardad.hook.GdtAdHook1;
 import cn.xylin.skiprewardad.hook.GdtAdHook2;
 import cn.xylin.skiprewardad.hook.GoogleAdHook1;
+import cn.xylin.skiprewardad.hook.IronSourceHook;
 import cn.xylin.skiprewardad.hook.KsAdHook;
 import cn.xylin.skiprewardad.hook.MintegralAdHook;
 import cn.xylin.skiprewardad.hook.SigmobAdHook;
@@ -62,5 +63,6 @@ public class Start implements IXposedHookLoadPackage {
         new GoogleAdHook1(baseContext);
         new ApplovinAdHook(baseContext);
         new cn.xylin.skiprewardad.hook.AwemeMiniGameHook(baseContext);
+        new IronSourceHook(baseContext);
     }
 }

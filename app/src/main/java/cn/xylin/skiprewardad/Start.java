@@ -2,8 +2,12 @@ package cn.xylin.skiprewardad;
 
 import android.app.Application;
 import android.content.Context;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import cn.xylin.skiprewardad.hook.ApplovinAdHook;
+import cn.xylin.skiprewardad.hook.AwemeMiniGameHook;
 import cn.xylin.skiprewardad.hook.BaiduAdHook;
 import cn.xylin.skiprewardad.hook.FusionAdHook;
 import cn.xylin.skiprewardad.hook.GdtAdHook1;
@@ -17,37 +21,53 @@ import cn.xylin.skiprewardad.hook.TTAdHook;
 import cn.xylin.skiprewardad.hook.UnityAdHook1;
 import cn.xylin.skiprewardad.hook.UnityAdHook2;
 import cn.xylin.skiprewardad.hook.VungleAdHook;
-import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodHook;
+import io.github.libxposed.api.XposedModule;
+import io.github.libxposed.api.XposedModuleInterface;
 import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import de.robv.android.xposed.XC_MethodHook;
 
-public class Start implements IXposedHookLoadPackage {
+public class Start extends XposedModule {
+    public static Start instance;
     private int hash;
+
+    public Start(@NonNull XposedModuleInterface.Instantiator instantiator) {
+        super(instantiator);
+        instance = this;
+    }
+
     @Override
-    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam load) {
-        if (!load.isFirstApplication) {
+    public void onPackageLoaded(@NonNull XposedModuleInterface.PackageLoadedParam param) {
+        if (!param.isFirstPackage()) {
             return;
         }
-        boolean isMainProcess = load.appInfo.processName.equals(load.processName);
-        boolean isAwemeMiniApp = load.packageName.equals("com.ss.android.ugc.aweme") && 
-                (load.processName.contains(":miniapp") || load.processName.contains(":appbrand"));
+
+        boolean isMainProcess = param.getPackageName().equals(param.getProcessName());
+        boolean isAwemeMiniApp = param.getPackageName().equals("com.ss.android.ugc.aweme") && 
+                (param.getProcessName().contains(":miniapp") || param.getProcessName().contains(":appbrand"));
         
         if (!isMainProcess && !isAwemeMiniApp) {
             return;
         }
-        XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                if (hash == hashCode()) {
-                    return;
+        
+        // Initialize XposedHelpers classloader for the current package
+        XposedHelpers.classLoader = param.getClassLoader();
+
+        try {
+            XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam hookParam) throws Throwable {
+                    if (hash == hashCode()) {
+                        return;
+                    }
+                    hash = hashCode();
+                    startHook((Context) hookParam.args[0]);
                 }
-                hash = hashCode();
-                startHook((Context) param.args[0]);
-            }
-        });
+            });
+        } catch (Throwable e) {
+            log(Log.ERROR, "Start", "Failed to hook Application.attach", e);
+        }
     }
-    
+
     private synchronized void startHook(Context baseContext) {
         new GdtAdHook1(baseContext);
         new GdtAdHook2(baseContext);
@@ -62,7 +82,7 @@ public class Start implements IXposedHookLoadPackage {
         new VungleAdHook(baseContext);
         new GoogleAdHook1(baseContext);
         new ApplovinAdHook(baseContext);
-        new cn.xylin.skiprewardad.hook.AwemeMiniGameHook(baseContext);
+        new AwemeMiniGameHook(baseContext);
         new IronSourceHook(baseContext);
     }
 }

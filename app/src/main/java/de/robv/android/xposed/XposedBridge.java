@@ -25,6 +25,52 @@ public class XposedBridge {
         }
     }
 
+    public static void hookMethod(Method method, XC_MethodHook callback) {
+        if (Start.instance != null && method != null && callback != null) {
+            Start.instance.hook(method).intercept(chain -> {
+                XC_MethodHook.MethodHookParam param = new XC_MethodHook.MethodHookParam();
+                param.method = method;
+                param.thisObject = chain.getThisObject();
+                param.args = chain.getArgs().toArray(new Object[0]);
+
+                try {
+                    callback.beforeHookedMethod(param);
+                } catch (Throwable t) {
+                    XposedBridge.log(t);
+                    param.setResult(null);
+                    param.returnEarly = true;
+                }
+
+                if (param.returnEarly) {
+                    if (param.hasThrowable()) {
+                        throw param.getThrowable();
+                    }
+                    return param.getResult();
+                }
+
+                try {
+                    Object result = chain.proceed();
+                    param.setResult(result);
+                } catch (Throwable t) {
+                    param.setThrowable(t);
+                }
+                
+                param.returnEarly = false;
+
+                try {
+                    callback.afterHookedMethod(param);
+                } catch (Throwable t) {
+                    XposedBridge.log(t);
+                }
+
+                if (param.hasThrowable()) {
+                    throw param.getThrowable();
+                }
+                return param.getResult();
+            });
+        }
+    }
+
     public static Set<XC_MethodHook.MethodHookParam> hookAllMethods(Class<?> hookClass, String methodName, XC_MethodHook callback) {
         Set<XC_MethodHook.MethodHookParam> hooked = new HashSet<>();
         if (hookClass == null || methodName == null || callback == null) return hooked;
@@ -36,7 +82,7 @@ public class XposedBridge {
                         XC_MethodHook.MethodHookParam param = new XC_MethodHook.MethodHookParam();
                         param.method = method;
                         param.thisObject = chain.getThisObject();
-                        param.args = chain.getArgs();
+                        param.args = chain.getArgs().toArray(new Object[0]);
 
                         // Call beforeHookedMethod
                         try {

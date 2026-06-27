@@ -9,6 +9,38 @@ import cn.xylin.skiprewardad.Start;
 public class XposedHelpers {
     public static ClassLoader classLoader = null; // Store it from Start.java
 
+    public static java.lang.reflect.Field findFirstFieldByExactType(Class<?> clazz, Class<?> type) {
+        for (java.lang.reflect.Field field : clazz.getDeclaredFields()) {
+            if (field.getType() == type) {
+                field.setAccessible(true);
+                return field;
+            }
+        }
+        for (java.lang.reflect.Field field : clazz.getFields()) {
+            if (field.getType() == type) {
+                field.setAccessible(true);
+                return field;
+            }
+        }
+        throw new NoSuchFieldError("Field of type " + type.getName() + " not found in " + clazz.getName());
+    }
+
+    public static Object getObjectField(Object obj, String fieldName) {
+        try {
+            java.lang.reflect.Field field = obj.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            return field.get(obj);
+        } catch (Exception e) {
+            try {
+                java.lang.reflect.Field field = obj.getClass().getField(fieldName);
+                field.setAccessible(true);
+                return field.get(obj);
+            } catch (Exception e2) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     public static Class<?> findClass(String className, ClassLoader classLoader) {
         try {
             return Class.forName(className, false, classLoader);
@@ -92,7 +124,7 @@ public class XposedHelpers {
                     XC_MethodHook.MethodHookParam param = new XC_MethodHook.MethodHookParam();
                     param.method = method;
                     param.thisObject = chain.getThisObject();
-                    param.args = chain.getArgs();
+                    param.args = chain.getArgs().toArray(new Object[0]);
 
                     try {
                         callback.beforeHookedMethod(param);

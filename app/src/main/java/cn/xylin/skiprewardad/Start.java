@@ -3,8 +3,7 @@ package cn.xylin.skiprewardad;
 import android.app.Application;
 import android.content.Context;
 import android.util.Log;
-
-import androidx.annotation.NonNull;
+import android.os.Build;
 
 import cn.xylin.skiprewardad.hook.ApplovinAdHook;
 import cn.xylin.skiprewardad.hook.AwemeMiniGameHook;
@@ -22,7 +21,7 @@ import cn.xylin.skiprewardad.hook.UnityAdHook1;
 import cn.xylin.skiprewardad.hook.UnityAdHook2;
 import cn.xylin.skiprewardad.hook.VungleAdHook;
 import io.github.libxposed.api.XposedModule;
-import io.github.libxposed.api.XposedModuleInterface;
+import io.github.libxposed.api.XposedInterface;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.XC_MethodHook;
 
@@ -30,28 +29,15 @@ public class Start extends XposedModule {
     public static Start instance;
     private int hash;
 
-    public Start(@NonNull XposedModuleInterface.Instantiator instantiator) {
-        super(instantiator);
+    public Start() {
+        super();
         instance = this;
     }
 
     @Override
-    public void onPackageLoaded(@NonNull XposedModuleInterface.PackageLoadedParam param) {
-        if (!param.isFirstPackage()) {
-            return;
-        }
-
-        boolean isMainProcess = param.getPackageName().equals(param.getProcessName());
-        boolean isAwemeMiniApp = param.getPackageName().equals("com.ss.android.ugc.aweme") && 
-                (param.getProcessName().contains(":miniapp") || param.getProcessName().contains(":appbrand"));
+    public void onPackageLoaded(PackageLoadedParam param) {
+        XposedHelpers.classLoader = param.getDefaultClassLoader();
         
-        if (!isMainProcess && !isAwemeMiniApp) {
-            return;
-        }
-        
-        // Initialize XposedHelpers classloader for the current package
-        XposedHelpers.classLoader = param.getClassLoader();
-
         try {
             XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
                 @Override
@@ -60,7 +46,19 @@ public class Start extends XposedModule {
                         return;
                     }
                     hash = hashCode();
-                    startHook((Context) hookParam.args[0]);
+                    Context context = (Context) hookParam.args[0];
+                    String processName = "";
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        processName = Application.getProcessName();
+                    }
+                    
+                    boolean isMainProcess = param.getPackageName().equals(processName) || processName == null || processName.isEmpty();
+                    boolean isAwemeMiniApp = param.getPackageName().equals("com.ss.android.ugc.aweme") && 
+                            (processName.contains(":miniapp") || processName.contains(":appbrand"));
+                    
+                    if (isMainProcess || isAwemeMiniApp) {
+                        startHook(context);
+                    }
                 }
             });
         } catch (Throwable e) {

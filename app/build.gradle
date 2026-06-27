@@ -3,11 +3,12 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    namespace "cn.xylin.skiprewardad"
+    compileSdk 35
     defaultConfig {
         applicationId "cn.xylin.skiprewardad"
         minSdk 21
-        targetSdk 32
+        targetSdk 35
         versionCode 3041921
         versionName "1.3"
     }
@@ -28,5 +29,10 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     compileOnly 'io.github.libxposed:api:102.0.0'
-    implementation 'io.github.libxposed:service:102.0.0'
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name.toLowerCase().contains("aarmetadata")) {
+        task.enabled = false
+    }
 }

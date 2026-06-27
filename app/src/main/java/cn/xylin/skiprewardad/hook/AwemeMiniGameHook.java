@@ -20,17 +20,30 @@ public class AwemeMiniGameHook extends BaseHook {
 
     @Override
     protected void runHook() throws Throwable {
+        log("AwemeMiniGame: Start Hooking in process!");
+        
         // 1. 尝试拦截常见的 JS 注入 (WebView 方案)
-        // 很多小游戏的广告回调最终会通过 evaluateJavascript 或 loadUrl 通知前端
-        hookWebViewJSBridge();
+        hookWebViewJSBridge(WebView.class);
+        
+        Class<?> ttWebView = XposedHelpers.findClassIfExists("com.bytedance.lynx.webview.TTWebview", context.getClassLoader());
+        if (ttWebView != null) {
+            log("AwemeMiniGame: Found TTWebview, hooking it.");
+            hookWebViewJSBridge(ttWebView);
+        }
+        
+        Class<?> x5WebView = XposedHelpers.findClassIfExists("com.tencent.smtt.sdk.WebView", context.getClassLoader());
+        if (x5WebView != null) {
+            log("AwemeMiniGame: Found X5 WebView, hooking it.");
+            hookWebViewJSBridge(x5WebView);
+        }
         
         // 2. 尝试寻找小游戏内部的激励视频 Activity 并秒关
         hookMiniGameActivity();
     }
     
-    private void hookWebViewJSBridge() {
+    private void hookWebViewJSBridge(Class<?> webViewClass) {
         try {
-            XposedHelpers.findAndHookMethod(WebView.class, "evaluateJavascript", String.class, ValueCallback.class, new XC_MethodHook() {
+            XposedHelpers.findAndHookMethod(webViewClass, "evaluateJavascript", String.class, ValueCallback.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     String script = (String) param.args[0];
@@ -48,7 +61,7 @@ public class AwemeMiniGameHook extends BaseHook {
                 }
             });
             
-            XposedHelpers.findAndHookMethod(WebView.class, "loadUrl", String.class, new XC_MethodHook() {
+            XposedHelpers.findAndHookMethod(webViewClass, "loadUrl", String.class, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     String url = (String) param.args[0];

@@ -24,6 +24,7 @@ import io.github.libxposed.api.XposedModule;
 import io.github.libxposed.api.XposedInterface;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 
 public class Start extends XposedModule {
     public static Start instance;
@@ -53,9 +54,10 @@ public class Start extends XposedModule {
                     }
                     
                     boolean isMainProcess = param.getPackageName().equals(processName) || processName == null || processName.isEmpty();
-                    boolean isAwemeMiniApp = param.getPackageName().equals("com.ss.android.ugc.aweme") && 
-                            (processName.contains(":miniapp") || processName.contains(":appbrand"));
+                    boolean isAwemeMiniApp = param.getPackageName().equals("com.ss.android.ugc.aweme");
                     
+                    XposedBridge.log("SkipRewardAd: Checking attach in " + processName + " for " + param.getPackageName());
+
                     if (isMainProcess || isAwemeMiniApp) {
                         startHook(context);
                     }

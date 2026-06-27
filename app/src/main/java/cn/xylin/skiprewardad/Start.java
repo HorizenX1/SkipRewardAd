@@ -25,7 +25,14 @@ public class Start implements IXposedHookLoadPackage {
     private int hash;
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam load) {
-        if (!load.isFirstApplication || !load.appInfo.processName.equals(load.processName)) {
+        if (!load.isFirstApplication) {
+            return;
+        }
+        boolean isMainProcess = load.appInfo.processName.equals(load.processName);
+        boolean isAwemeMiniApp = load.packageName.equals("com.ss.android.ugc.aweme") && 
+                (load.processName.contains(":miniapp") || load.processName.contains(":appbrand"));
+        
+        if (!isMainProcess && !isAwemeMiniApp) {
             return;
         }
         XposedHelpers.findAndHookMethod(Application.class, "attach", Context.class, new XC_MethodHook() {
@@ -54,5 +61,6 @@ public class Start implements IXposedHookLoadPackage {
         new VungleAdHook(baseContext);
         new GoogleAdHook1(baseContext);
         new ApplovinAdHook(baseContext);
+        new cn.xylin.skiprewardad.hook.AwemeMiniGameHook(baseContext);
     }
 }
